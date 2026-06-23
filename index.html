@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>彩票号码筛选工具 - 双色球/大乐透</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .app { max-width: 960px; width: 100%; }
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 24px; margin-bottom: 20px; }
+
+  .game-switch { display: flex; gap: 0; margin-bottom: 20px; background: #f0f2f5; border-radius: 8px; padding: 3px; }
+  .game-switch button {
+    flex: 1; padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600;
+    cursor: pointer; background: transparent; color: #666; transition: all .2s;
+  }
+  .game-switch button.active { background: #4361ee; color: #fff; box-shadow: 0 2px 8px rgba(67,97,238,.25); }
+  .game-switch button[data-game="dlt"].active { background: #e63946; }
+
+  .filter-section { margin-bottom: 16px; }
+  .filter-section .section-label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
+
+  .picker-row { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
+  .opt-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .opt-group .pos-label { font-size: 11px; color: #999; }
+  .opt-group .opts { display: flex; gap: 2px; }
+  .opt-group .opts button {
+    width: 36px; height: 36px; border: 1px solid #d9d9d9; border-radius: 6px;
+    background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all .12s; color: #555; padding: 0;
+  }
+  .opt-group .opts button:hover { border-color: #4361ee; }
+  .opt-group .opts button.sel { background: #4361ee; border-color: #4361ee; color: #fff; }
+  .opt-group .opts button.sel.r1 { background: #2ec4b6; border-color: #2ec4b6; }
+  .opt-group .opts button.sel.r2 { background: #e63946; border-color: #e63946; }
+
+  .zone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .zone-row input {
+    width: 120px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
+    font-size: 14px; outline: none; transition: border-color .2s;
+  }
+  .zone-row input:focus { border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,.15); }
+  .zone-row input.error { border-color: #e63946; box-shadow: 0 0 0 2px rgba(230,57,70,.15); }
+  .zone-row .hint { font-size: 12px; color: #999; }
+  .err-msg { font-size: 12px; color: #e63946; margin-top: 4px; min-height: 18px; }
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
+  .btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s; }
+  .btn:active { transform: scale(.97); }
+  .btn-primary { background: #4361ee; color: #fff; }
+  .btn-primary:hover { background: #3651d4; }
+  .btn-secondary { background: #e8e8e8; color: #333; }
+  .btn-secondary:hover { background: #d9d9d9; }
+  .btn-success { background: #2ec4b6; color: #fff; }
+  .btn-success:hover { background: #25a99d; }
+  .stats { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: #555; }
+  .stats .num { font-weight: 600; color: #1a1a2e; }
+  .stats .num.highlight { color: #4361ee; font-size: 18px; }
+
+  .result-area { min-height: 100px; }
+  .result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
+  .result-item {
+    display: flex; align-items: center; gap: 6px; padding: 8px 12px;
+    background: #f8f9fc; border-radius: 6px; font-size: 14px;
+    font-family: "SF Mono","Fira Code","Consolas",monospace; transition: background .15s;
+  }
+  .result-item:hover { background: #eef0f7; }
+  .ball {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%; font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0;
+  }
+  .ball.z1 { background: #4361ee; }
+  .ball.z2 { background: #2ec4b6; }
+  .ball.z3 { background: #e63946; }
+  .empty-state { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: #666; margin-top: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend .ball { width: 16px; height: 16px; font-size: 0; }
+  .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+  .pagination .btn { padding: 6px 14px; font-size: 13px; }
+  .pagination .page-info { font-size: 13px; color: #666; }
+  .footer-note { text-align: center; font-size: 12px; color: #bbb; margin-top: 24px; }
+  @media (max-width: 480px) {
+    .picker-row { gap: 4px; }
+    .opt-group .opts button { width: 32px; height: 32px; font-size: 12px; }
+    .ball { width: 26px; height: 26px; font-size: 11px; }
+    body { padding: 16px 10px; }
+    .card { padding: 16px; }
+    .stats .num.highlight { font-size: 16px; }
+  }
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+<div class="app">
+  <h1>🎱 彩票号码筛选</h1>
+
+  <div class="game-switch">
+    <button class="active" data-game="ssq">🎯 双色球 <small>1-33</small></button>
+    <button data-game="dlt">🏆 大乐透 <small>1-35</small></button>
+  </div>
+
+  <div class="card">
+    <div class="filter-section">
+      <div class="section-label">① 路数 <span style="font-weight:400;color:#999;font-size:12px;">每位除 3 的余数</span></div>
+      <div class="picker-row" id="routePickers"></div>
+    </div>
+    <div class="filter-section">
+      <div class="section-label">② 奇偶</div>
+      <div class="picker-row" id="parityPickers"></div>
+    </div>
+    <div class="filter-section">
+      <div class="section-label">③ 区间分布</div>
+      <div class="zone-row">
+        <input id="inputZone" type="text" placeholder="例：312" maxlength="3" autocomplete="off" spellcheck="false">
+        <span class="hint"><span id="zoneHint">一区(1-11) 二区(12-22) 三区(23-33)</span> · <span id="zoneSum">三数和=6</span></span>
+      </div>
+      <div class="err-msg" id="errZone"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="btnFilter">筛选号码</button>
+      <button class="btn btn-success" id="btnRandom">随机一注</button>
+      <button class="btn btn-secondary" id="btnClear">清空</button>
+      <div style="margin-left:auto;font-size:12px;color:#999;">
+        共 <span id="totalCombos" class="num">-</span> 种组合
+      </div>
+    </div>
+  </div>
+
+  <div class="card result-area">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
+      <div style="font-size:15px;font-weight:600;color:#333;">筛选结果</div>
+      <div class="stats">
+        <span>匹配 <span class="num highlight" id="countResult">-</span> 注</span>
+        <span>耗时 <span class="num" id="timeResult">-</span> ms</span>
+      </div>
+    </div>
+    <div id="resultContainer">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🔍</div>
+        <div style="margin-bottom:16px;">选择条件后点击「筛选号码」</div>
+        <div class="legend" style="justify-content:center;" id="legendDisplay">
+          <span class="legend-item"><span class="ball z1">1</span> <span id="legendZ1">一区 (1-11)</span></span>
+          <span class="legend-item"><span class="ball z2">2</span> <span id="legendZ2">二区 (12-22)</span></span>
+          <span class="legend-item"><span class="ball z3">3</span> <span id="legendZ3">三区 (23-33)</span></span>
+        </div>
+      </div>
+    </div>
+    <div class="pagination" id="pagination" style="display:none;"></div>
+  </div>
+  <div class="footer-note">仅供娱乐 · 彩票有风险 投注需谨慎</div>
+</div>
+
+<script>
+// ─── game config ────────────────────────────────
+const GAMES = {
+  ssq: { max:33, z:[11,22,33], pick:6, zl:['一区 (1-11)','二区 (12-22)','三区 (23-33)'], zs:'三数和=6' },
+  dlt: { max:35, z:[12,24,35], pick:5, zl:['一区 (1-12)','二区 (13-24)','三区 (25-35)'], zs:'三数和=5' }
+};
+let gameKey = 'ssq';
+function cfg() { return GAMES[gameKey]; }
+function allNums() { return Array.from({length:cfg().max},(_,i)=>i+1); }
+function zone(n) { const z=cfg().z; if(n<=z[0])return 1; if(n<=z[1])return 2; return 3; }
+function route(n) { return n%3; }
+function parity(n) { return n%2===1?'奇':'偶'; }
+
+// ─── combinations ────────────────────────────────
+function* combine(arr,k) {
+  if(k===0){yield [];return;}
+  for(let i=0;i<=arr.length-k;i++)
+    for(const rest of combine(arr.slice(i+1),k-1))
+      yield [arr[i],...rest];
+}
+
+// ─── picker generators ──────────────────────────
+function buildPickers() {
+  const pick = cfg().pick;
+  ['route','parity'].forEach(type => {
+    const ct = document.getElementById(type+'Pickers');
+    ct.innerHTML = '';
+    const vv = type==='route' ? ['0','1','2'] : ['奇','偶'];
+    for(let i=0;i<pick;i++){
+      const g = document.createElement('div');
+      g.className='opt-group'; g.dataset.idx=i;
+      const lbl = document.createElement('span');
+      lbl.className='pos-label'; lbl.textContent=i+1;
+      g.appendChild(lbl);
+      const opts = document.createElement('div');
+      opts.className='opts';
+      vv.forEach(v => {
+        const b = document.createElement('button');
+        b.dataset.v=v; b.textContent=v;
+        b.addEventListener('click',()=>{
+          b.classList.toggle('sel');
+        });
+        opts.appendChild(b);
+      });
+      g.appendChild(opts);
+      ct.appendChild(g);
+    }
+  });
+}
+
+function getRoutePat() {
+  const groups = document.querySelectorAll('#routePickers .opt-group');
+  let has = false;
+  const arr = Array.from(groups).map(g => {
+    const sel = g.querySelectorAll('.opts button.sel');
+    if(sel.length) has=true;
+    return sel.length ? Array.from(sel).map(b=>parseInt(b.dataset.v)) : null;
+  });
+  return has ? arr : null;
+}
+
+function getParityPat() {
+  const groups = document.querySelectorAll('#parityPickers .opt-group');
+  let has = false;
+  const arr = Array.from(groups).map(g => {
+    const sel = g.querySelectorAll('.opts button.sel');
+    if(sel.length) has=true;
+    return sel.length ? Array.from(sel).map(b=>b.dataset.v) : null;
+  });
+  return has ? arr : null;
+}
+
+function getZonePat() {
+  const v = document.getElementById('inputZone').value.trim();
+  if(!v) return null;
+  if(!/^[0-9]{3}$/.test(v)) return null;
+  const d = v.split('').map(Number);
+  if(d.reduce((a,b)=>a+b,0)!==cfg().pick) return null;
+  return d;
+}
+
+// ─── switch game ────────────────────────────────
+function switchGame(key) {
+  gameKey = key;
+  document.querySelectorAll('.game-switch button').forEach(b => b.classList.toggle('active',b.dataset.game===key));
+  const c = cfg();
+  document.getElementById('zoneHint').textContent = c.zl.join(' ');
+  document.getElementById('zoneSum').textContent = c.zs;
+  document.getElementById('legendZ1').textContent = c.zl[0];
+  document.getElementById('legendZ2').textContent = c.zl[1];
+  document.getElementById('legendZ3').textContent = c.zl[2];
+  // total combos
+  const n = c.max, k = c.pick;
+  let tot = 1;
+  for(let i=1;i<=k;i++) tot = tot * (n-k+i) / i;
+  document.getElementById('totalCombos').textContent = Math.round(tot).toLocaleString();
+  // rebuild pickers for the new pick count
+  buildPickers();
+  clearAll();
+}
+
+document.querySelectorAll('.game-switch button').forEach(b => {
+  b.addEventListener('click',()=>switchGame(b.dataset.game));
+});
+
+// ─── filtering ───────────────────────────────────
+function doFilter() {
+  // validate zone
+  const errZ = document.getElementById('errZone');
+  const inpZ = document.getElementById('inputZone');
+  const zv = inpZ.value.trim();
+  if(zv && !/^[0-9]{3}$/.test(zv)) {
+    errZ.textContent='区间请输入3位数字'; inpZ.classList.add('error'); return;
+  }
+  if(zv) {
+    const d=zv.split('').map(Number);
+    if(d.reduce((a,b)=>a+b,0)!==cfg().pick) {
+      errZ.textContent='三位数字之和必须等于 '+cfg().pick; inpZ.classList.add('error'); return;
+    }
+  }
+  errZ.textContent=''; inpZ.classList.remove('error');
+
+  const rp = getRoutePat();
+  const pp = getParityPat();
+  const zp = getZonePat();
+
+  if(!rp && !pp && !zp) {
+    document.getElementById('resultContainer').innerHTML=
+      '<div class="empty-state"><div class="icon">⚠️</div><div>请至少选择一项筛选条件</div></div>';
+    document.getElementById('countResult').textContent='-';
+    document.getElementById('timeResult').textContent='-';
+    document.getElementById('pagination').style.display='none';
+    return;
+  }
+
+  document.getElementById('resultContainer').innerHTML='<div class="loading" style="text-align:center;padding:24px;color:#666;font-size:14px;"><span class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid #e0e0e0;border-top-color:#4361ee;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px;"></span>筛选中...</div>';
+  document.getElementById('pagination').style.display='none';
+
+  setTimeout(() => {
+    const t0 = performance.now();
+    const results = [];
+    const p = cfg().pick;
+    for(const combo of combine(allNums(),p)) {
+      if(rp && !rp.every((arr,i)=>arr===null||arr.includes(route(combo[i])))) continue;
+      if(pp && !pp.every((arr,i)=>arr===null||arr.includes(parity(combo[i])))) continue;
+      if(zp) {
+        const cnt=[0,0,0];
+        for(const n of combo) cnt[zone(n)-1]++;
+        if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2]) continue;
+      }
+      results.push(combo);
+    }
+    const t1 = performance.now();
+
+    document.getElementById('countResult').textContent = results.length.toLocaleString();
+    document.getElementById('timeResult').textContent = (t1-t0).toFixed(1);
+
+    renderResults(results, 0);
+  }, 30);
+}
+
+let lastResults = [];
+let curPage = 0;
+const PAGE_SIZE = 50;
+
+function renderResults(results, page) {
+  lastResults = results;
+  const total = results.length;
+  const totalPages = Math.ceil(total/PAGE_SIZE) || 1;
+  if(page>=totalPages) page=totalPages-1;
+  if(page<0) page=0;
+  curPage = page;
+
+  const start = page * PAGE_SIZE;
+  const end = Math.min(start+PAGE_SIZE, total);
+  const items = results.slice(start,end);
+  const ct = document.getElementById('resultContainer');
+  const pg = document.getElementById('pagination');
+
+  if(total===0) {
+    ct.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>没有符合条件的结果</div></div>';
+    pg.style.display='none';
+    return;
+  }
+
+  let html = '<div class="result-grid">';
+  for(const combo of items) {
+    const balls = combo.map(n => `<span class="ball z${zone(n)}">${String(n).padStart(2,'0')}</span>`).join('');
+    html += `<div class="result-item">${balls}</div>`;
+  }
+  html += '</div>';
+  ct.innerHTML = html;
+
+  let p = `<button class="btn btn-secondary" data-page="0" ${page===0?'disabled':''}>首页</button>`;
+  p += `<button class="btn btn-secondary" data-page="${page-1}" ${page===0?'disabled':''}>上一页</button>`;
+  p += `<span class="page-info">第 ${page+1}/${totalPages} 页</span>`;
+  p += `<button class="btn btn-secondary" data-page="${page+1}" ${page>=totalPages-1?'disabled':''}>下一页</button>`;
+  p += `<button class="btn btn-secondary" data-page="${totalPages-1}" ${page>=totalPages-1?'disabled':''}>末页</button>`;
+  pg.innerHTML = p;
+  pg.style.display = 'flex';
+
+  pg.querySelectorAll('[data-page]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p2 = parseInt(btn.dataset.page);
+      if(!isNaN(p2) && p2>=0 && p2<totalPages) renderResults(results, p2);
+    });
+  });
+}
+
+function doRandom() {
+  const rp = getRoutePat();
+  const pp = getParityPat();
+  const zp = getZonePat();
+
+  const t0 = performance.now();
+  const all = [];
+  const p = cfg().pick;
+  for(const combo of combine(allNums(),p)) {
+    if(rp && !rp.every((arr,i)=>arr===null||arr.includes(route(combo[i])))) continue;
+    if(pp && !pp.every((arr,i)=>arr===null||arr.includes(parity(combo[i])))) continue;
+    if(zp) {
+      const cnt=[0,0,0];
+      for(const n of combo) cnt[zone(n)-1]++;
+      if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2]) continue;
+    }
+    all.push(combo);
+  }
+  const t1 = performance.now();
+
+  document.getElementById('countResult').textContent = all.length.toLocaleString();
+  document.getElementById('timeResult').textContent = (t1-t0).toFixed(1);
+
+  if(all.length===0) {
+    document.getElementById('resultContainer').innerHTML =
+      '<div class="empty-state"><div class="icon">🎲</div><div>当前条件下无可用号码</div></div>';
+    document.getElementById('pagination').style.display='none';
+    return;
+  }
+
+  const pick = all[Math.floor(Math.random()*all.length)];
+  const balls = pick.map(n => `<span class="ball z${zone(n)}">${String(n).padStart(2,'0')}</span>`).join('');
+  document.getElementById('resultContainer').innerHTML = `
+    <div style="text-align:center;padding:20px;">
+      <div style="font-size:13px;color:#999;margin-bottom:12px;">🎲 随机一注</div>
+      <div style="display:flex;justify-content:center;gap:6px;">${balls}</div>
+      <div style="font-size:12px;color:#bbb;margin-top:8px;">共 ${all.length.toLocaleString()} 种组合中随机</div>
+    </div>`;
+  document.getElementById('pagination').style.display='none';
+  lastResults = all;
+}
+
+function clearAll() {
+  document.querySelectorAll('#routePickers .opts button, #parityPickers .opts button').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('inputZone').value='';
+  document.getElementById('inputZone').classList.remove('error');
+  document.getElementById('errZone').textContent='';
+  lastResults=[]; curPage=0;
+  document.getElementById('countResult').textContent='-';
+  document.getElementById('timeResult').textContent='-';
+  document.getElementById('pagination').style.display='none';
+  document.getElementById('resultContainer').innerHTML =
+    document.getElementById('emptyState').outerHTML;
+}
+
+// ─── event bindings ──────────────────────────────
+document.getElementById('btnFilter').addEventListener('click', doFilter);
+document.getElementById('btnRandom').addEventListener('click', doRandom);
+document.getElementById('btnClear').addEventListener('click', clearAll);
+document.getElementById('inputZone').addEventListener('keydown', e => { if(e.key==='Enter') doFilter(); });
+
+// ─── init ────────────────────────────────────────
+buildPickers();
+
+// Prefill example: route 002220, parity 奇偶偶偶偶奇, zone 312
+const routeExample = '002220'.split('').map(Number);
+document.querySelectorAll('#routePickers .opt-group').forEach((g,i)=>{
+  const btns = g.querySelectorAll('.opts button');
+  btns.forEach(b => { if(parseInt(b.dataset.v)===routeExample[i]) b.classList.add('sel'); });
+});
+const parityExample = ['奇','偶','偶','偶','偶','奇'];
+document.querySelectorAll('#parityPickers .opt-group').forEach((g,i)=>{
+  const btns = g.querySelectorAll('.opts button');
+  btns.forEach(b => { if(b.dataset.v===parityExample[i]) b.classList.add('sel'); });
+});
+document.getElementById('inputZone').value = '312';
+
+switchGame('ssq');
+setTimeout(doFilter, 100);
+</script>
+<script>
+if("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js");
+  });
+}
+</script>
+</body>
+</html>
