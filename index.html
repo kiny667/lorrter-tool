@@ -182,8 +182,6 @@ function buildPickers(){
   document.getElementById('sRed6').style.display=c().pick===6?'':'none';document.getElementById('sBlue2').style.display=c().bPick===2?'':'none'}
 function getPat(id){const g=document.querySelectorAll('#'+id+' .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelectorAll('.opts button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
 function getRoutePat(){const g=document.querySelectorAll('#routeParityPickers .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelector('.opts').querySelectorAll('button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
-function getParityPat(){const g=document.querySelectorAll('#routeParityPickers .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelectorAll('.opts')[1].querySelectorAll('button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
-function getBRoutePat(){return getPat('bRoutePickers')}
 function getBParityPat(){return getPat('bParityPickers')}
 function getZonePat(){const v=document.getElementById('zoneInp').value.trim();if(!v)return null;if(!/^[0-9]{3}$/.test(v))return null;const d=v.split('').map(Number);if(d.reduce((a,b)=>a+b,0)!==c().pick)return null;return d}
 function swG(key){
