@@ -1,464 +1,584 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>彩票号码筛选工具 - 双色球/大乐透</title>
+<!DOCTYPE html><html lang=zh-CN><meta charset=UTF-8><meta name=viewport content="width=device-width,initial-scale=1.0">
+<title>彩票号码筛选与统计</title>
+<link rel=manifest href=manifest.json>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=apple-mobile-web-app-status-bar-style content=black-translucent>
+<link rel=apple-touch-icon href=icon-192.png>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
-    background: #f0f2f5;
-    color: #1a1a2e;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    padding: 32px 16px;
-  }
-  .app { max-width: 960px; width: 100%; }
-  h1 { font-size: 22px; font-weight: 600; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.08); padding: 24px; margin-bottom: 20px; }
-
-  .game-switch { display: flex; gap: 0; margin-bottom: 20px; background: #f0f2f5; border-radius: 8px; padding: 3px; }
-  .game-switch button {
-    flex: 1; padding: 10px 16px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600;
-    cursor: pointer; background: transparent; color: #666; transition: all .2s;
-  }
-  .game-switch button.active { background: #4361ee; color: #fff; box-shadow: 0 2px 8px rgba(67,97,238,.25); }
-  .game-switch button[data-game="dlt"].active { background: #e63946; }
-
-  .filter-section { margin-bottom: 16px; }
-  .filter-section .section-label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
-
-  .picker-row { display: flex; gap: 6px; align-items: flex-start; flex-wrap: wrap; }
-  .opt-group { display: flex; flex-direction: column; align-items: center; gap: 3px; }
-  .opt-group .pos-label { font-size: 11px; color: #999; }
-  .opt-group .opts { display: flex; gap: 2px; }
-  .opt-group .opts button {
-    width: 36px; height: 36px; border: 1px solid #d9d9d9; border-radius: 6px;
-    background: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: all .12s; color: #555; padding: 0;
-  }
-  .opt-group .opts button:hover { border-color: #4361ee; }
-  .opt-group .opts button.sel { background: #4361ee; border-color: #4361ee; color: #fff; }
-  .opt-group .opts button.sel.r1 { background: #2ec4b6; border-color: #2ec4b6; }
-  .opt-group .opts button.sel.r2 { background: #e63946; border-color: #e63946; }
-
-  .zone-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .zone-row input {
-    width: 120px; padding: 8px 12px; border: 1px solid #d9d9d9; border-radius: 6px;
-    font-size: 14px; outline: none; transition: border-color .2s;
-  }
-  .zone-row input:focus { border-color: #4361ee; box-shadow: 0 0 0 2px rgba(67,97,238,.15); }
-  .zone-row input.error { border-color: #e63946; box-shadow: 0 0 0 2px rgba(230,57,70,.15); }
-  .zone-row .hint { font-size: 12px; color: #999; }
-  .err-msg { font-size: 12px; color: #e63946; margin-top: 4px; min-height: 18px; }
-  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
-  .btn { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background .2s; }
-  .btn:active { transform: scale(.97); }
-  .btn-primary { background: #4361ee; color: #fff; }
-  .btn-primary:hover { background: #3651d4; }
-  .btn-secondary { background: #e8e8e8; color: #333; }
-  .btn-secondary:hover { background: #d9d9d9; }
-  .btn-success { background: #2ec4b6; color: #fff; }
-  .btn-success:hover { background: #25a99d; }
-  .stats { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: #555; }
-  .stats .num { font-weight: 600; color: #1a1a2e; }
-  .stats .num.highlight { color: #4361ee; font-size: 18px; }
-
-  .result-area { min-height: 100px; }
-  .result-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 12px; }
-  .result-item {
-    display: flex; align-items: center; gap: 6px; padding: 8px 12px;
-    background: #f8f9fc; border-radius: 6px; font-size: 14px;
-    font-family: "SF Mono","Fira Code","Consolas",monospace; transition: background .15s;
-  }
-  .result-item:hover { background: #eef0f7; }
-  .ball {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 30px; height: 30px; border-radius: 50%; font-size: 13px; font-weight: 600; color: #fff; flex-shrink: 0;
-  }
-  .ball.z1 { background: #4361ee; }
-  .ball.z2 { background: #2ec4b6; }
-  .ball.z3 { background: #e63946; }
-  .empty-state { text-align: center; padding: 40px 20px; color: #999; font-size: 14px; }
-  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
-  .legend { display: flex; gap: 16px; font-size: 12px; color: #666; margin-top: 12px; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; }
-  .legend .ball { width: 16px; height: 16px; font-size: 0; }
-  .pagination { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
-  .pagination .btn { padding: 6px 14px; font-size: 13px; }
-  .pagination .page-info { font-size: 13px; color: #666; }
-  .footer-note { text-align: center; font-size: 12px; color: #bbb; margin-top: 24px; }
-  @media (max-width: 480px) {
-    .picker-row { gap: 4px; }
-    .opt-group .opts button { width: 32px; height: 32px; font-size: 12px; }
-    .ball { width: 26px; height: 26px; font-size: 11px; }
-    body { padding: 16px 10px; }
-    .card { padding: 16px; }
-    .stats .num.highlight { font-size: 16px; }
-  }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:#f0f2f5;color:#1a1a2e;min-height:100vh;display:flex;justify-content:center;padding:24px 12px}
+.app{max-width:960px;width:100%}
+h1{font-size:20px;font-weight:600;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:20px;margin-bottom:16px}
+/* tabs */
+.tab-bar{display:flex;gap:0;margin-bottom:16px;background:#f0f2f5;border-radius:8px;padding:3px}
+.tab-bar button{flex:1;padding:9px 14px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#666;transition:all .2s}
+.tab-bar button.active{background:#4361ee;color:#fff;box-shadow:0 2px 8px rgba(67,97,238,.25)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+/* game switch */
+.game-sw{display:flex;gap:0;margin-bottom:16px;background:#f0f2f5;border-radius:8px;padding:3px}
+.game-sw button{flex:1;padding:9px 14px;border:none;border-radius:6px;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#666;transition:all .2s}
+.game-sw button.active{background:#4361ee;color:#fff;box-shadow:0 2px 8px rgba(67,97,238,.25)}
+.game-sw button[data-game=dlt].active{background:#e63946}
+/* sections */
+.sec{margin-bottom:14px}.sec:last-of-type{margin-bottom:0}
+.sec .sec-lbl{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+.sec .sec-lbl small{font-weight:400;color:#999;font-size:12px}
+/* vertical picker rows */
+.pkr-col{display:flex;flex-direction:column;gap:6px}
+.pkr-row{display:flex;align-items:center;gap:8px}
+.pkr-row .pl{font-size:12px;color:#999;width:16px;text-align:right;flex-shrink:0}
+.pkr-row .opts{display:flex;gap:3px}
+.pkr-row .opts button{width:36px;height:32px;border:1px solid #d9d9d9;border-radius:5px;background:#fff;font-size:12px;font-weight:600;cursor:pointer;transition:all .12s;color:#555;padding:0}
+.pkr-row .opts button:hover{border-color:#4361ee}
+.pkr-row .opts button.sel{background:#4361ee;border-color:#4361ee;color:#fff}
+.pkr-row .opts button.sel.r1{background:#2ec4b6;border-color:#2ec4b6}
+.pkr-row .opts button.sel.r2{background:#e63946;border-color:#e63946}
+/* blue zone pickers */
+.bzone{margin-top:10px;padding:10px 12px;background:#f8f9ff;border-radius:6px;border:1px solid #e8ecff}
+.bzone .b-lbl{font-size:12px;font-weight:600;color:#4361ee;margin-bottom:6px}
+.b-picker{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.b-picker .bp-lbl{font-size:11px;color:#888;width:14px;text-align:right}
+.b-picker .opts{display:flex;gap:2px}
+.b-picker .opts button{width:30px;height:26px;border:1px solid #d9d9d9;border-radius:4px;background:#fff;font-size:11px;font-weight:600;cursor:pointer;transition:all .1s;color:#555;padding:0}
+.b-picker .opts button:hover{border-color:#f0a030}
+.b-picker .opts button.sel{background:#f0a030;border-color:#f0a030;color:#fff}
+.b-picker .opts button.sel.r1{background:#2ec4b6;border-color:#2ec4b6}
+.b-picker .opts button.sel.r2{background:#e63946;border-color:#e63946}
+/* zone input */
+.z-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.z-row input{width:110px;padding:7px 10px;border:1px solid #d9d9d9;border-radius:5px;font-size:13px;outline:none;transition:border-color .2s}
+.z-row input:focus{border-color:#4361ee;box-shadow:0 0 0 2px rgba(67,97,238,.15)}
+.z-row input.error{border-color:#e63946}
+.z-row .zh{font-size:12px;color:#999}
+.err-msg{font-size:12px;color:#e63946;min-height:16px}
+/* buttons */
+.acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.btn{padding:8px 20px;border:none;border-radius:5px;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s}
+.btn:active{transform:scale(.97)}
+.btn-pri{background:#4361ee;color:#fff}
+.btn-pri:hover{background:#3651d4}
+.btn-sec{background:#e8e8e8;color:#333}
+.btn-sec:hover{background:#d9d9d9}
+.btn-suc{background:#2ec4b6;color:#fff}
+.btn-suc:hover{background:#25a99d}
+.btn-warn{background:#f0a030;color:#fff}
+.btn-warn:hover{background:#d8902a}
+.btn-dgr{background:#e63946;color:#fff}
+.btn-dgr:hover{background:#d12e3b}
+.stats{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#555}
+.stats .num{font-weight:600;color:#1a1a2e}
+.stats .num.hl{color:#4361ee;font-size:17px}
+/* results */
+.res-area{min-height:80px}
+.res-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:10px}
+.res-item{display:flex;align-items:center;gap:4px;padding:6px 10px;background:#f8f9fc;border-radius:5px;font-size:13px;font-family:"SF Mono","Fira Code","Consolas",monospace;transition:background .15s;flex-wrap:wrap}
+.res-item:hover{background:#eef0f7}
+.ball{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.ball.z1{background:#4361ee}
+.ball.z2{background:#2ec4b6}
+.ball.z3{background:#e63946}
+.ball.blue{background:#f0a030}
+.emp{text-align:center;padding:30px 16px;color:#999;font-size:13px}
+.emp .icon{font-size:36px;margin-bottom:10px}
+.legend{display:flex;gap:12px;font-size:12px;color:#666;margin-top:10px;flex-wrap:wrap}
+.legend .ball{width:14px;height:14px;font-size:0}
+.pg{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;flex-wrap:wrap}
+.pg .btn{padding:5px 12px;font-size:12px}
+.pg .pi{font-size:12px;color:#666}
+.fn{text-align:center;font-size:11px;color:#bbb;margin-top:20px}
+/* Statistics tab */
+.stat-section{margin-bottom:16px}
+.stat-section h3{font-size:14px;font-weight:600;color:#333;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #eee}
+.input-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.input-row label{font-size:12px;color:#666;min-width:40px}
+.input-row input{width:60px;padding:5px 6px;border:1px solid #d9d9d9;border-radius:4px;font-size:12px;outline:none;text-align:center}
+.input-row input:focus{border-color:#4361ee}
+.input-row input.num-lg{width:80px}
+.input-row input.num-xl{width:180px}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:4px}
+.stat-item{display:flex;justify-content:space-between;padding:4px 8px;background:#f8f9fc;border-radius:4px;font-size:12px;font-family:"SF Mono",Consolas,monospace}
+.stat-item .cnt{font-weight:600;color:#4361ee}
+.stat-bar{height:6px;background:#e8ecff;border-radius:3px;margin-top:3px;overflow:hidden}
+.stat-bar .fill{height:100%;background:#4361ee;border-radius:3px;transition:width .3s}
+.stat-table{width:100%;border-collapse:collapse;font-size:12px}
+.stat-table th,.stat-table td{padding:4px 8px;text-align:center;border-bottom:1px solid #eee}
+.stat-table th{background:#f8f9fc;font-weight:600;color:#555}
+.stat-table tr:hover{background:#f0f2ff}
+.data-list{max-height:300px;overflow-y:auto;border:1px solid #eee;border-radius:4px;font-size:11px;font-family:"SF Mono",Consolas,monospace;margin-top:8px}
+.data-list table{width:100%;border-collapse:collapse}
+.data-list th,.data-list td{padding:3px 5px;text-align:center;border-bottom:1px solid #f0f0f0;white-space:nowrap}
+.data-list th{position:sticky;top:0;background:#f8f9fc;font-weight:600;color:#555;z-index:1}
+.data-list .del{cursor:pointer;color:#e63946;font-weight:bold}
+.sum-line{font-size:13px;color:#555;margin-bottom:8px}
+.sum-line .nm{font-weight:600;color:#4361ee}
+@media(max-width:480px){
+  .pkr-row .opts button{width:32px;height:30px;font-size:11px}
+  .ball{width:24px;height:24px;font-size:11px}
+  body{padding:12px 8px}
+  .card{padding:14px}
+  .input-row input{width:50px}
+  .input-row input.num-xl{width:140px}
+  .stat-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+}
 </style>
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="icon-192.png">
-</head>
-<body>
-<div class="app">
-  <h1>🎱 彩票号码筛选</h1>
+<body><div class=app>
+<h1>🎱 彩票号码筛选</h1>
+<div class=game-sw id=gameSwitch><button class=active data-game=ssq>🎯 双色球</button><button data-game=dlt>🏆 大乐透</button></div>
+<div class=tab-bar id=tabBar><button class=active data-tab=filter>🔎 筛选</button><button data-tab=stats>📊 统计</button></div>
 
-  <div class="game-switch">
-    <button class="active" data-game="ssq">🎯 双色球 <small>1-33</small></button>
-    <button data-game="dlt">🏆 大乐透 <small>1-35</small></button>
+<!-- Filter Tab -->
+<div class=tab-content active id=tabFilter>
+<div class=card>
+<div class=sec><div class=sec-lbl>① 红区路数 <small>每位除3余数</small></div><div class=pkr-col id=routePickers></div></div>
+<div class=sec><div class=sec-lbl>② 红区奇偶</div><div class=pkr-col id=parityPickers></div></div>
+<div class=sec><div class=sec-lbl>③ 红区区间分布</div>
+  <div class=z-row><input id=zoneInp type=text placeholder="如312" maxlength=3><span class=zh><span id=zoneHint>一区(1-11) 二区(12-22) 三区(23-33)</span> · <span id=zoneSum>三数和=6</span></span></div>
+  <div class=err-msg id=errZone></div>
+</div>
+<div class=sec><div class=sec-lbl>④ 蓝区</div>
+  <div class=bzone id=blueZone>
+    <div class=b-lbl>路数</div><div class=pkr-col id=bRoutePickers></div>
+    <div class=b-lbl style=margin-top:6px>奇偶</div><div class=pkr-col id=bParityPickers></div>
   </div>
+</div>
+<div class=acts>
+  <button class="btn btn-pri" id=btnFilter>筛选号码</button>
+  <button class="btn btn-suc" id=btnRandom>随机一注</button>
+  <button class="btn btn-sec" id=btnClear>清空</button>
+  <span style=margin-left:auto;font-size:12px;color:#999>共 <span id=totalCombos class=num>-</span> 种</span>
+</div>
+</div>
+<div class=card><div class=res-area>
+<div style=display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px>
+  <div style=font-size:14px;font-weight:600;color:#333>筛选结果</div>
+  <div class=stats><span>匹配 <span class="num hl" id=countResult>-</span> 注</span><span>耗时 <span class=num id=timeResult>-</span> ms</span></div>
+</div>
+<div id=resultContainer><div class=emp id=emptyState><div class=icon>🔍</div><div style=margin-bottom:12px>选择条件后点击「筛选号码」</div>
+<div class=legend style=justify-content:center id=legendDisplay><span class=legend-item><span class="ball z1">1</span> <span id=legendZ1>一区</span></span><span class=legend-item><span class="ball z2">2</span> <span id=legendZ2>二区</span></span><span class=legend-item><span class="ball z3">3</span> <span id=legendZ3>三区</span></span><span class=legend-item><span class="ball blue">蓝</span> 蓝球</span></div>
+</div></div>
+<div class=pg id=pagination style=display:none></div>
+</div></div>
+<div class=fn>仅供娱乐 · 彩票有风险 投注需谨慎</div>
+</div>
 
-  <div class="card">
-    <div class="filter-section">
-      <div class="section-label">① 路数 <span style="font-weight:400;color:#999;font-size:12px;">每位除 3 的余数</span></div>
-      <div class="picker-row" id="routePickers"></div>
-    </div>
-    <div class="filter-section">
-      <div class="section-label">② 奇偶</div>
-      <div class="picker-row" id="parityPickers"></div>
-    </div>
-    <div class="filter-section">
-      <div class="section-label">③ 区间分布</div>
-      <div class="zone-row">
-        <input id="inputZone" type="text" placeholder="例：312" maxlength="3" autocomplete="off" spellcheck="false">
-        <span class="hint"><span id="zoneHint">一区(1-11) 二区(12-22) 三区(23-33)</span> · <span id="zoneSum">三数和=6</span></span>
-      </div>
-      <div class="err-msg" id="errZone"></div>
-    </div>
-    <div class="actions">
-      <button class="btn btn-primary" id="btnFilter">筛选号码</button>
-      <button class="btn btn-success" id="btnRandom">随机一注</button>
-      <button class="btn btn-secondary" id="btnClear">清空</button>
-      <div style="margin-left:auto;font-size:12px;color:#999;">
-        共 <span id="totalCombos" class="num">-</span> 种组合
-      </div>
-    </div>
-  </div>
-
-  <div class="card result-area">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-      <div style="font-size:15px;font-weight:600;color:#333;">筛选结果</div>
-      <div class="stats">
-        <span>匹配 <span class="num highlight" id="countResult">-</span> 注</span>
-        <span>耗时 <span class="num" id="timeResult">-</span> ms</span>
-      </div>
-    </div>
-    <div id="resultContainer">
-      <div class="empty-state" id="emptyState">
-        <div class="icon">🔍</div>
-        <div style="margin-bottom:16px;">选择条件后点击「筛选号码」</div>
-        <div class="legend" style="justify-content:center;" id="legendDisplay">
-          <span class="legend-item"><span class="ball z1">1</span> <span id="legendZ1">一区 (1-11)</span></span>
-          <span class="legend-item"><span class="ball z2">2</span> <span id="legendZ2">二区 (12-22)</span></span>
-          <span class="legend-item"><span class="ball z3">3</span> <span id="legendZ3">三区 (23-33)</span></span>
-        </div>
-      </div>
-    </div>
-    <div class="pagination" id="pagination" style="display:none;"></div>
-  </div>
-  <div class="footer-note">仅供娱乐 · 彩票有风险 投注需谨慎</div>
+<!-- Stats Tab -->
+<div class=tab-content id=tabStats>
+<div class=card>
+<div class=sec><div class=sec-lbl>录入历史数据</div>
+<div class=input-row><label>期号</label><input id=sPeriod type=text placeholder="2026001" class=num-lg></div>
+<div class=input-row><label>红球</label><input id=sRed1 class=num-lg><input id=sRed2 class=num-lg><input id=sRed3 class=num-lg><input id=sRed4 class=num-lg><input id=sRed5 class=num-lg><input id=sRed6 class=num-lg style=display:none data-idx=5>
+<span style=font-size:11px;color:#999>空格分隔</span></div>
+<div class=input-row><label>蓝球</label><input id=sBlue1 class=num-lg><input id=sBlue2 class=num-lg style=display:none data-idx=1>
+<span style=font-size:11px;color:#999>输入后自动分析</span></div>
+<div class=acts>
+  <button class="btn btn-pri" id=btnAddData>添加</button>
+  <button class="btn btn-dgr" id=btnClearData>清空所有数据</button>
+  <span style=margin-left:auto;font-size:12px;color:#999>已录 <span class=num id=dataCount>0</span> 期</span>
+</div>
+</div>
+</div>
+<div class=card id=statsDisplay>
+<div class=sec><div class=sec-lbl>号码频率统计</div>
+<div class=sum-line>红球总出现次数: <span class=nm id=totalRedCount>0</span> &nbsp;|&nbsp; 蓝球总出现次数: <span class=nm id=totalBlueCount>0</span></div>
+<div><div style=font-size:13px;font-weight:500;color:#4361ee;margin-bottom:4px>红球号码出现次数</div><div class=stat-grid id=redFreqGrid></div></div>
+<div style=margin-top:10px><div style=font-size:13px;font-weight:500;color:#f0a030;margin-bottom:4px>蓝球号码出现次数</div><div class=stat-grid id=blueFreqGrid></div></div>
+</div>
+<div class=sec style=margin-top:14px><div class=sec-lbl>路数统计</div>
+<div class=sum-line>出现总次数: <span class=nm id=totalRouteCount>0</span></div>
+<div><div style=font-size:13px;font-weight:500;color:#555;margin-bottom:4px>每位路数(0/1/2)出现次数</div><table class=stat-table id=routeStatTable></table></div>
+<div style=margin-top:10px><div style=font-size:13px;font-weight:500;color:#555;margin-bottom:4px>路数组合出现次数(Top 20)</div><div class=stat-grid id=routeCombGrid></div></div>
+</div>
+<div class=sec style=margin-top:14px><div class=sec-lbl>奇偶统计</div>
+<div><div style=font-size:13px;font-weight:500;color:#555;margin-bottom:4px>奇偶组合出现次数(Top 20)</div><div class=stat-grid id=parityCombGrid></div></div>
+</div>
+<div class=sec style=margin-top:14px><div class=sec-lbl>区间分布统计</div>
+<div><div style=font-size:13px;font-weight:500;color:#555;margin-bottom:4px>区间组合出现次数(Top 20)</div><div class=stat-grid id=zoneCombGrid></div></div>
+</div>
+<div class=sec style=margin-top:14px><div class=sec-lbl>已录入数据</div>
+  <div class=data-list id=dataListContainer><div class=emp style=padding:16px;font-size:12px>暂无数据</div></div>
+</div>
+</div>
+</div>
 </div>
 
 <script>
-// ─── game config ────────────────────────────────
-const GAMES = {
-  ssq: { max:33, z:[11,22,33], pick:6, zl:['一区 (1-11)','二区 (12-22)','三区 (23-33)'], zs:'三数和=6' },
-  dlt: { max:35, z:[12,24,35], pick:5, zl:['一区 (1-12)','二区 (13-24)','三区 (25-35)'], zs:'三数和=5' }
-};
-let gameKey = 'ssq';
-function cfg() { return GAMES[gameKey]; }
-function allNums() { return Array.from({length:cfg().max},(_,i)=>i+1); }
-function zone(n) { const z=cfg().z; if(n<=z[0])return 1; if(n<=z[1])return 2; return 3; }
-function route(n) { return n%3; }
-function parity(n) { return n%2===1?'奇':'偶'; }
+// ─── GAME CONFIG ────────────────────────────────
+const G={ssq:{max:33,z:[11,22,33],pick:6,bMax:16,bPick:1,zl:['一区(1-11)','二区(12-22)','三区(23-33)'],zs:'三数和=6'},
+       dlt:{max:35,z:[12,24,35],pick:5,bMax:12,bPick:2,zl:['一区(1-12)','二区(13-24)','三区(25-35)'],zs:'三数和=5'}};
+let gk='ssq';function c(){return G[gk]}
+function allN(){return Array.from({length:c().max},(_,i)=>i+1)}
+function allB(){return Array.from({length:c().bMax},(_,i)=>i+1)}
+function zn(n){const z=c().z;if(n<=z[0])return 1;if(n<=z[1])return 2;return 3}
+function rt(n){return n%3}
+function pt(n){return n%2===1?'奇':'偶'}
 
-// ─── combinations ────────────────────────────────
-function* combine(arr,k) {
-  if(k===0){yield [];return;}
-  for(let i=0;i<=arr.length-k;i++)
-    for(const rest of combine(arr.slice(i+1),k-1))
-      yield [arr[i],...rest];
-}
+// ─── COMBINATIONS ────────────────────────────────
+function*comb(arr,k){if(k===0){yield[];return}for(let i=0;i<=arr.length-k;i++)for(const r of comb(arr.slice(i+1),k-1))yield[arr[i],...r]}
 
-// ─── picker generators ──────────────────────────
-function buildPickers() {
-  const pick = cfg().pick;
-  ['route','parity'].forEach(type => {
-    const ct = document.getElementById(type+'Pickers');
-    ct.innerHTML = '';
-    const vv = type==='route' ? ['0','1','2'] : ['奇','偶'];
-    for(let i=0;i<pick;i++){
-      const g = document.createElement('div');
-      g.className='opt-group'; g.dataset.idx=i;
-      const lbl = document.createElement('span');
-      lbl.className='pos-label'; lbl.textContent=i+1;
-      g.appendChild(lbl);
-      const opts = document.createElement('div');
-      opts.className='opts';
-      vv.forEach(v => {
-        const b = document.createElement('button');
-        b.dataset.v=v; b.textContent=v;
-        b.addEventListener('click',()=>{
-          b.classList.toggle('sel');
-        });
-        opts.appendChild(b);
+// ─── BUILD PICKERS (VERTICAL) ────────────────────
+function buildPickers(){
+  const pk=c().pick;
+  ['route','parity'].forEach(t=>{
+    const ct=document.getElementById(t+'Pickers');ct.innerHTML='';
+    const vv=t==='route'?['0','1','2']:['奇','偶'];
+    for(let i=0;i<pk;i++){
+      const r=document.createElement('div');r.className='pkr-row';
+      const lb=document.createElement('span');lb.className='pl';lb.textContent=i+1;r.appendChild(lb);
+      const o=document.createElement('div');o.className='opts';
+      vv.forEach(v=>{
+        const b=document.createElement('button');b.dataset.v=v;b.textContent=v;
+        b.addEventListener('click',()=>b.classList.toggle('sel'));
+        o.appendChild(b)
       });
-      g.appendChild(opts);
-      ct.appendChild(g);
+      r.appendChild(o);ct.appendChild(r)
     }
   });
-}
-
-function getRoutePat() {
-  const groups = document.querySelectorAll('#routePickers .opt-group');
-  let has = false;
-  const arr = Array.from(groups).map(g => {
-    const sel = g.querySelectorAll('.opts button.sel');
-    if(sel.length) has=true;
-    return sel.length ? Array.from(sel).map(b=>parseInt(b.dataset.v)) : null;
+  // Blue zone pickers
+  const bpk=c().bPick;['bRoute','bParity'].forEach(t=>{
+    const ct=document.getElementById(t+'Pickers');ct.innerHTML='';
+    const vv=t==='bRoute'?['0','1','2']:['奇','偶'];
+    for(let i=0;i<bpk;i++){
+      const r=document.createElement('div');r.className='pkr-row';r.style.gap='6px';
+      const lb=document.createElement('span');lb.className='pl';lb.textContent=i+1;r.appendChild(lb);
+      const o=document.createElement('div');o.className='opts';
+      vv.forEach(v=>{
+        const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.style.width='32px';b.style.height='28px';
+        b.addEventListener('click',()=>b.classList.toggle('sel'));
+        o.appendChild(b)
+      });
+      r.appendChild(o);ct.appendChild(r)
+    }
   });
-  return has ? arr : null;
+  // Show/hide extra inputs
+  document.getElementById('sRed6').style.display=c().pick===6?'':'none';
+  document.getElementById('sBlue2').style.display=c().bPick===2?'':'none';
 }
 
-function getParityPat() {
-  const groups = document.querySelectorAll('#parityPickers .opt-group');
-  let has = false;
-  const arr = Array.from(groups).map(g => {
-    const sel = g.querySelectorAll('.opts button.sel');
-    if(sel.length) has=true;
-    return sel.length ? Array.from(sel).map(b=>b.dataset.v) : null;
-  });
-  return has ? arr : null;
-}
+// ─── GET PATTERNS ────────────────────────────────
+function getPat(id){const g=document.querySelectorAll('#'+id+' .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelectorAll('.opts button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
+function getRoutePat(){return getPat('routePickers')}
+function getParityPat(){return getPat('parityPickers')}
+function getBRoutePat(){return getPat('bRoutePickers')}
+function getBParityPat(){return getPat('bParityPickers')}
+function getZonePat(){const v=document.getElementById('zoneInp').value.trim();if(!v)return null;if(!/^[0-9]{3}$/.test(v))return null;const d=v.split('').map(Number);if(d.reduce((a,b)=>a+b,0)!==c().pick)return null;return d}
 
-function getZonePat() {
-  const v = document.getElementById('inputZone').value.trim();
-  if(!v) return null;
-  if(!/^[0-9]{3}$/.test(v)) return null;
-  const d = v.split('').map(Number);
-  if(d.reduce((a,b)=>a+b,0)!==cfg().pick) return null;
-  return d;
+// ─── SWITCH GAME ────────────────────────────────
+function swG(key){
+  gk=key;const cfg=c();
+  document.querySelectorAll('#gameSwitch button').forEach(b=>b.classList.toggle('active',b.dataset.game===key));
+  document.getElementById('zoneHint').textContent=cfg.zl.join(' ');
+  document.getElementById('zoneSum').textContent=cfg.zs;
+  document.getElementById('legendZ1').textContent=cfg.zl[0];
+  document.getElementById('legendZ2').textContent=cfg.zl[1];
+  document.getElementById('legendZ3').textContent=cfg.zl[2];
+  const n=cfg.max,k=cfg.pick;let t=1;for(let i=1;i<=k;i++)t=t*(n-k+i)/i;
+  document.getElementById('totalCombos').textContent=Math.round(t).toLocaleString();
+  buildPickers();clearAll();
+  // Update stats game label
+  renderStats();
 }
+document.querySelectorAll('#gameSwitch button').forEach(b=>b.addEventListener('click',()=>swG(b.dataset.game)));
 
-// ─── switch game ────────────────────────────────
-function switchGame(key) {
-  gameKey = key;
-  document.querySelectorAll('.game-switch button').forEach(b => b.classList.toggle('active',b.dataset.game===key));
-  const c = cfg();
-  document.getElementById('zoneHint').textContent = c.zl.join(' ');
-  document.getElementById('zoneSum').textContent = c.zs;
-  document.getElementById('legendZ1').textContent = c.zl[0];
-  document.getElementById('legendZ2').textContent = c.zl[1];
-  document.getElementById('legendZ3').textContent = c.zl[2];
-  // total combos
-  const n = c.max, k = c.pick;
-  let tot = 1;
-  for(let i=1;i<=k;i++) tot = tot * (n-k+i) / i;
-  document.getElementById('totalCombos').textContent = Math.round(tot).toLocaleString();
-  // rebuild pickers for the new pick count
-  buildPickers();
-  clearAll();
-}
-
-document.querySelectorAll('.game-switch button').forEach(b => {
-  b.addEventListener('click',()=>switchGame(b.dataset.game));
+// ─── TAB SWITCH ────────────────────────────────
+document.querySelectorAll('#tabBar button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('#tabBar button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+    document.getElementById('tab'+b.dataset.tab.charAt(0).toUpperCase()+b.dataset.tab.slice(1)).classList.add('active');
+    if(b.dataset.tab==='stats')renderStats();
+  })
 });
 
-// ─── filtering ───────────────────────────────────
-function doFilter() {
-  // validate zone
-  const errZ = document.getElementById('errZone');
-  const inpZ = document.getElementById('inputZone');
-  const zv = inpZ.value.trim();
-  if(zv && !/^[0-9]{3}$/.test(zv)) {
-    errZ.textContent='区间请输入3位数字'; inpZ.classList.add('error'); return;
+// ─── FILTERING ───────────────────────────────────
+function doFilter(){
+  const errZ=document.getElementById('errZone'),inpZ=document.getElementById('zoneInp'),zv=inpZ.value.trim();
+  if(zv&&!/^[0-9]{3}$/.test(zv)){errZ.textContent='请输入3位数字';inpZ.classList.add('error');return}
+  if(zv){const d=zv.split('').map(Number);if(d.reduce((a,b)=>a+b,0)!==c().pick){errZ.textContent='三数和必须='+c().pick;inpZ.classList.add('error');return}}
+  errZ.textContent='';inpZ.classList.remove('error');
+  const rp=getRoutePat(),pp=getParityPat(),zp=getZonePat(),brp=getBRoutePat(),bpp=getBParityPat();
+  if(!rp&&!pp&&!zp&&!brp&&!bpp){
+    document.getElementById('resultContainer').innerHTML='<div class=emp><div class=icon>⚠️</div><div>请至少选择一项筛选条件</div></div>';
+    document.getElementById('countResult').textContent='-';document.getElementById('timeResult').textContent='-';document.getElementById('pagination').style.display='none';return
   }
-  if(zv) {
-    const d=zv.split('').map(Number);
-    if(d.reduce((a,b)=>a+b,0)!==cfg().pick) {
-      errZ.textContent='三位数字之和必须等于 '+cfg().pick; inpZ.classList.add('error'); return;
-    }
-  }
-  errZ.textContent=''; inpZ.classList.remove('error');
-
-  const rp = getRoutePat();
-  const pp = getParityPat();
-  const zp = getZonePat();
-
-  if(!rp && !pp && !zp) {
-    document.getElementById('resultContainer').innerHTML=
-      '<div class="empty-state"><div class="icon">⚠️</div><div>请至少选择一项筛选条件</div></div>';
-    document.getElementById('countResult').textContent='-';
-    document.getElementById('timeResult').textContent='-';
-    document.getElementById('pagination').style.display='none';
-    return;
-  }
-
-  document.getElementById('resultContainer').innerHTML='<div class="loading" style="text-align:center;padding:24px;color:#666;font-size:14px;"><span class="spinner" style="display:inline-block;width:20px;height:20px;border:2px solid #e0e0e0;border-top-color:#4361ee;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:8px;"></span>筛选中...</div>';
+  const pk=c().pick,bpk=c().bPick;
   document.getElementById('pagination').style.display='none';
-
-  setTimeout(() => {
-    const t0 = performance.now();
-    const results = [];
-    const p = cfg().pick;
-    for(const combo of combine(allNums(),p)) {
-      if(rp && !rp.every((arr,i)=>arr===null||arr.includes(route(combo[i])))) continue;
-      if(pp && !pp.every((arr,i)=>arr===null||arr.includes(parity(combo[i])))) continue;
-      if(zp) {
-        const cnt=[0,0,0];
-        for(const n of combo) cnt[zone(n)-1]++;
-        if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2]) continue;
+  setTimeout(()=>{
+    const t0=performance.now(),res=[];
+    const rNums=allN(),bNums=allB();
+    for(const rc of comb(rNums,pk)){
+      if(rp&&!rp.every((a,i)=>a===null||a.includes(String(rt(rc[i])))))continue;
+      if(pp&&!pp.every((a,i)=>a===null||a.includes(pt(rc[i]))))continue;
+      if(zp){const cnt=[0,0,0];for(const n of rc)cnt[zn(n)-1]++;if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2])continue}
+      // Blue balls
+      if(!brp&&!bpp){res.push({r:rc,b:[]});continue}
+      for(const bc of comb(bNums,bpk)){
+        if(brp&&!brp.every((a,i)=>a===null||a.includes(String(rt(bc[i])))))continue;
+        if(bpp&&!bpp.every((a,i)=>a===null||a.includes(pt(bc[i]))))continue;
+        res.push({r:rc,b:bc})
       }
-      results.push(combo);
     }
-    const t1 = performance.now();
-
-    document.getElementById('countResult').textContent = results.length.toLocaleString();
-    document.getElementById('timeResult').textContent = (t1-t0).toFixed(1);
-
-    renderResults(results, 0);
-  }, 30);
+    const t1=performance.now();
+    document.getElementById('countResult').textContent=res.length.toLocaleString();
+    document.getElementById('timeResult').textContent=(t1-t0).toFixed(1);
+    renderRes(res,0)
+  },30)
 }
 
-let lastResults = [];
-let curPage = 0;
-const PAGE_SIZE = 50;
-
-function renderResults(results, page) {
-  lastResults = results;
-  const total = results.length;
-  const totalPages = Math.ceil(total/PAGE_SIZE) || 1;
-  if(page>=totalPages) page=totalPages-1;
-  if(page<0) page=0;
-  curPage = page;
-
-  const start = page * PAGE_SIZE;
-  const end = Math.min(start+PAGE_SIZE, total);
-  const items = results.slice(start,end);
-  const ct = document.getElementById('resultContainer');
-  const pg = document.getElementById('pagination');
-
-  if(total===0) {
-    ct.innerHTML = '<div class="empty-state"><div class="icon">📭</div><div>没有符合条件的结果</div></div>';
-    pg.style.display='none';
-    return;
+let lr=[],cp=0;const PS=50;
+function renderRes(r,pg){
+  lr=r;const t=r.length,tp=Math.ceil(t/PS)||1;if(pg>=tp)pg=tp-1;if(pg<0)pg=0;cp=pg;
+  const st=pg*PS,en=Math.min(st+PS,t),it=r.slice(st,en),ct=document.getElementById('resultContainer'),pn=document.getElementById('pagination');
+  if(t===0){ct.innerHTML='<div class=emp><div class=icon>📭</div><div>没有符合条件的结果</div></div>';pn.style.display='none';return}
+  let h='<div class=res-grid>';
+  for(const o of it){
+    let bs='';for(const n of o.r)bs+=`<span class="ball z${zn(n)}">${String(n).padStart(2,'0')}</span>`;
+    for(const n of o.b)bs+=`<span class="ball blue">${String(n).padStart(2,'0')}</span>`;
+    h+=`<div class=res-item>${bs}</div>`
   }
-
-  let html = '<div class="result-grid">';
-  for(const combo of items) {
-    const balls = combo.map(n => `<span class="ball z${zone(n)}">${String(n).padStart(2,'0')}</span>`).join('');
-    html += `<div class="result-item">${balls}</div>`;
-  }
-  html += '</div>';
-  ct.innerHTML = html;
-
-  let p = `<button class="btn btn-secondary" data-page="0" ${page===0?'disabled':''}>首页</button>`;
-  p += `<button class="btn btn-secondary" data-page="${page-1}" ${page===0?'disabled':''}>上一页</button>`;
-  p += `<span class="page-info">第 ${page+1}/${totalPages} 页</span>`;
-  p += `<button class="btn btn-secondary" data-page="${page+1}" ${page>=totalPages-1?'disabled':''}>下一页</button>`;
-  p += `<button class="btn btn-secondary" data-page="${totalPages-1}" ${page>=totalPages-1?'disabled':''}>末页</button>`;
-  pg.innerHTML = p;
-  pg.style.display = 'flex';
-
-  pg.querySelectorAll('[data-page]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const p2 = parseInt(btn.dataset.page);
-      if(!isNaN(p2) && p2>=0 && p2<totalPages) renderResults(results, p2);
-    });
-  });
+  h+='</div>';ct.innerHTML=h;
+  let p=`<button class="btn btn-sec" data-p=0 ${pg===0?'disabled':''}>首页</button>`;
+  p+=`<button class="btn btn-sec" data-p=${pg-1} ${pg===0?'disabled':''}>上一页</button>`;
+  p+=`<span class=pi>第 ${pg+1}/${tp} 页</span>`;
+  p+=`<button class="btn btn-sec" data-p=${pg+1} ${pg>=tp-1?'disabled':''}>下一页</button>`;
+  p+=`<button class="btn btn-sec" data-p=${tp-1} ${pg>=tp-1?'disabled':''}>末页</button>`;
+  pn.innerHTML=p;pn.style.display='flex';
+  pn.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{const p2=parseInt(b.dataset.p);if(!isNaN(p2)&&p2>=0&&p2<tp)renderRes(r,p2)}))
 }
 
-function doRandom() {
-  const rp = getRoutePat();
-  const pp = getParityPat();
-  const zp = getZonePat();
-
-  const t0 = performance.now();
-  const all = [];
-  const p = cfg().pick;
-  for(const combo of combine(allNums(),p)) {
-    if(rp && !rp.every((arr,i)=>arr===null||arr.includes(route(combo[i])))) continue;
-    if(pp && !pp.every((arr,i)=>arr===null||arr.includes(parity(combo[i])))) continue;
-    if(zp) {
-      const cnt=[0,0,0];
-      for(const n of combo) cnt[zone(n)-1]++;
-      if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2]) continue;
+function doRandom(){
+  const rp=getRoutePat(),pp=getParityPat(),zp=getZonePat(),brp=getBRoutePat(),bpp=getBParityPat();
+  const pk=c().pick,bpk=c().bPick;
+  const t0=performance.now(),all=[];
+  const rNums=allN(),bNums=allB();
+  for(const rc of comb(rNums,pk)){
+    if(rp&&!rp.every((a,i)=>a===null||a.includes(String(rt(rc[i])))))continue;
+    if(pp&&!pp.every((a,i)=>a===null||a.includes(pt(rc[i]))))continue;
+    if(zp){const cnt=[0,0,0];for(const n of rc)cnt[zn(n)-1]++;if(cnt[0]!==zp[0]||cnt[1]!==zp[1]||cnt[2]!==zp[2])continue}
+    if(!brp&&!bpp){all.push({r:rc,b:[]});continue}
+    for(const bc of comb(bNums,bpk)){
+      if(brp&&!brp.every((a,i)=>a===null||a.includes(String(rt(bc[i])))))continue;
+      if(bpp&&!bpp.every((a,i)=>a===null||a.includes(pt(bc[i]))))continue;
+      all.push({r:rc,b:bc})
     }
-    all.push(combo);
   }
-  const t1 = performance.now();
-
-  document.getElementById('countResult').textContent = all.length.toLocaleString();
-  document.getElementById('timeResult').textContent = (t1-t0).toFixed(1);
-
-  if(all.length===0) {
-    document.getElementById('resultContainer').innerHTML =
-      '<div class="empty-state"><div class="icon">🎲</div><div>当前条件下无可用号码</div></div>';
-    document.getElementById('pagination').style.display='none';
-    return;
+  const t1=performance.now();
+  document.getElementById('countResult').textContent=all.length.toLocaleString();
+  document.getElementById('timeResult').textContent=(t1-t0).toFixed(1);
+  if(all.length===0){
+    document.getElementById('resultContainer').innerHTML='<div class=emp><div class=icon>🎲</div><div>当前条件下无可用号码</div></div>';
+    document.getElementById('pagination').style.display='none';return
   }
-
-  const pick = all[Math.floor(Math.random()*all.length)];
-  const balls = pick.map(n => `<span class="ball z${zone(n)}">${String(n).padStart(2,'0')}</span>`).join('');
-  document.getElementById('resultContainer').innerHTML = `
-    <div style="text-align:center;padding:20px;">
-      <div style="font-size:13px;color:#999;margin-bottom:12px;">🎲 随机一注</div>
-      <div style="display:flex;justify-content:center;gap:6px;">${balls}</div>
-      <div style="font-size:12px;color:#bbb;margin-top:8px;">共 ${all.length.toLocaleString()} 种组合中随机</div>
+  const pick=all[Math.floor(Math.random()*all.length)];
+  let bs='';for(const n of pick.r)bs+=`<span class="ball z${zn(n)}">${String(n).padStart(2,'0')}</span>`;
+  for(const n of pick.b)bs+=`<span class="ball blue">${String(n).padStart(2,'0')}</span>`;
+  document.getElementById('resultContainer').innerHTML=`
+    <div style=text-align:center;padding:16px>
+      <div style=font-size:13px;color:#999;margin-bottom:10px>🎲 随机一注</div>
+      <div style=display:flex;justify-content:center;gap:4px;flex-wrap:wrap>${bs}</div>
+      <div style=font-size:12px;color:#bbb;margin-top:8px>共 ${all.length.toLocaleString()} 种组合中随机</div>
     </div>`;
-  document.getElementById('pagination').style.display='none';
-  lastResults = all;
+  document.getElementById('pagination').style.display='none';lr=all
 }
 
-function clearAll() {
-  document.querySelectorAll('#routePickers .opts button, #parityPickers .opts button').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('inputZone').value='';
-  document.getElementById('inputZone').classList.remove('error');
-  document.getElementById('errZone').textContent='';
-  lastResults=[]; curPage=0;
-  document.getElementById('countResult').textContent='-';
-  document.getElementById('timeResult').textContent='-';
+function clearAll(){
+  document.querySelectorAll('#routePickers .opts button,#parityPickers .opts button,#bRoutePickers .opts button,#bParityPickers .opts button').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('zoneInp').value='';document.getElementById('zoneInp').classList.remove('error');document.getElementById('errZone').textContent='';
+  lr=[];cp=0;
+  document.getElementById('countResult').textContent='-';document.getElementById('timeResult').textContent='-';
   document.getElementById('pagination').style.display='none';
-  document.getElementById('resultContainer').innerHTML =
-    document.getElementById('emptyState').outerHTML;
+  document.getElementById('resultContainer').innerHTML=document.getElementById('emptyState').outerHTML
 }
 
-// ─── event bindings ──────────────────────────────
-document.getElementById('btnFilter').addEventListener('click', doFilter);
-document.getElementById('btnRandom').addEventListener('click', doRandom);
-document.getElementById('btnClear').addEventListener('click', clearAll);
-document.getElementById('inputZone').addEventListener('keydown', e => { if(e.key==='Enter') doFilter(); });
+// ─── EVENTS ──────────────────────────────────────
+document.getElementById('btnFilter').addEventListener('click',doFilter);
+document.getElementById('btnRandom').addEventListener('click',doRandom);
+document.getElementById('btnClear').addEventListener('click',clearAll);
+document.getElementById('zoneInp').addEventListener('keydown',e=>{if(e.key==='Enter')doFilter()});
 
-// ─── init ────────────────────────────────────────
+// ─── INIT ────────────────────────────────────────
 buildPickers();
+// Prefill example
+const rEx='002220'.split('').map(Number);
+document.querySelectorAll('#routePickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(parseInt(b.dataset.v)===rEx[i])b.classList.add('sel')})});
+const pEx=['奇','偶','偶','偶','偶','奇'];
+document.querySelectorAll('#parityPickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(b.dataset.v===pEx[i])b.classList.add('sel')})});
+document.getElementById('zoneInp').value='312';
+swG('ssq');
+setTimeout(doFilter,100);
 
-// Prefill example: route 002220, parity 奇偶偶偶偶奇, zone 312
-const routeExample = '002220'.split('').map(Number);
-document.querySelectorAll('#routePickers .opt-group').forEach((g,i)=>{
-  const btns = g.querySelectorAll('.opts button');
-  btns.forEach(b => { if(parseInt(b.dataset.v)===routeExample[i]) b.classList.add('sel'); });
-});
-const parityExample = ['奇','偶','偶','偶','偶','奇'];
-document.querySelectorAll('#parityPickers .opt-group').forEach((g,i)=>{
-  const btns = g.querySelectorAll('.opts button');
-  btns.forEach(b => { if(b.dataset.v===parityExample[i]) b.classList.add('sel'); });
-});
-document.getElementById('inputZone').value = '312';
+// ═══════════════════════════════════════════════════
+// ─── STATISTICS MODULE ────────────────────────────
+// ═══════════════════════════════════════════════════
 
-switchGame('ssq');
-setTimeout(doFilter, 100);
-</script>
-<script>
-if("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js");
-  });
+// ─── DATA ────────────────────────────────────────
+function loadData(){try{const d=localStorage.getItem('lotteryStats_'+gk);return d?JSON.parse(d):[]}catch(e){return[]}}
+function saveData(d){localStorage.setItem('lotteryStats_'+gk,JSON.stringify(d))}
+
+function getStatPick(){return G[gk].pick}
+
+// ─── ADD RECORD ──────────────────────────────────
+document.getElementById('btnAddData').addEventListener('click',()=>{
+  const data=loadData();
+  if(data.length>=500){alert('最多录入500期');return}
+  const period=document.getElementById('sPeriod').value.trim();
+  if(!period){alert('请输入期号');return}
+  // Read red balls
+  const pk=getStatPick();
+  const reds=[];let ok=true;
+  for(let i=0;i<pk;i++){
+    const v=document.getElementById('sRed'+(i+1)).value.trim();
+    if(!v){ok=false;break}
+    const n=parseInt(v);
+    if(isNaN(n)||n<1||n>G[gk].max){ok=false;break}
+    if(reds.includes(n)){ok=false;break}
+    reds.push(n)
+  }
+  if(!ok||reds.length!==pk){alert('请输入正确的红球号码(1-'+G[gk].max+'，不重复)');return}
+  reds.sort((a,b)=>a-b);
+  // Read blue balls
+  const bpk=G[gk].bPick;
+  const blues=[];
+  for(let i=0;i<bpk;i++){
+    const v=document.getElementById('sBlue'+(i+1)).value.trim();
+    if(!v){ok=false;break}
+    const n=parseInt(v);
+    if(isNaN(n)||n<1||n>G[gk].bMax){ok=false;break}
+    if(blues.includes(n)){ok=false;break}
+    blues.push(n)
+  }
+  if(!ok||blues.length!==bpk){alert('请输入正确的蓝球号码(1-'+G[gk].bMax+'，不重复)');return}
+  blues.sort((a,b)=>a-b);
+  // Auto calc patterns
+  const routeR=reds.map(n=>rt(n)).join(''),parityR=reds.map(n=>pt(n)).join('');
+  const routeB=blues.map(n=>rt(n)).join(''),parityB=blues.map(n=>pt(n)).join('');
+  const zCnt=[0,0,0];reds.forEach(n=>zCnt[zn(n)-1]++);const zone=zCnt.join('');
+  // Check duplicate
+  if(data.some(d=>d.period===period)){alert('期号重复');return}
+  data.push({period,reds,blues,routeR,parityR,routeB,parityB,zone,game:gk});
+  saveData(data);
+  // Clear inputs
+  document.getElementById('sPeriod').value='';
+  for(let i=0;i<pk;i++)document.getElementById('sRed'+(i+1)).value='';
+  for(let i=0;i<bpk;i++)document.getElementById('sBlue'+(i+1)).value='';
+  renderStats()
+});
+
+document.getElementById('btnClearData').addEventListener('click',()=>{
+  if(!confirm('确认清空所有统计数据？'))return;
+  saveData([]);renderStats()
+});
+
+// ─── RENDER STATS ────────────────────────────────
+function renderStats(){
+  const data=loadData();
+  document.getElementById('dataCount').textContent=data.length;
+  if(data.length===0){
+    document.getElementById('redFreqGrid').innerHTML='<div class=emp style=padding:8px;font-size:12px>暂无数据</div>';
+    document.getElementById('blueFreqGrid').innerHTML='';
+    document.getElementById('routeStatTable').innerHTML='';
+    document.getElementById('routeCombGrid').innerHTML='';
+    document.getElementById('parityCombGrid').innerHTML='';
+    document.getElementById('zoneCombGrid').innerHTML='';
+    document.getElementById('totalRedCount').textContent='0';
+    document.getElementById('totalBlueCount').textContent='0';
+    document.getElementById('totalRouteCount').textContent='0';
+    document.getElementById('dataListContainer').innerHTML='<div class=emp style=padding:16px;font-size:12px>暂无数据</div>';
+    return
+  }
+  
+  // Count frequencies
+  const rCnt={},bCnt={};
+  for(let i=1;i<=G[gk].max;i++)rCnt[i]=0;
+  for(let i=1;i<=G[gk].bMax;i++)bCnt[i]=0;
+  
+  const rCombCnt={},pCombCnt={},zCombCnt={};
+  const posRoutes=[0,1,2].map(()=>({0:0,1:0,2:0}));
+  
+  let totalRed=0,totalBlue=0;
+  
+  for(const d of data){
+    for(const n of d.reds){rCnt[n]++;totalRed++}
+    for(const n of d.blues){bCnt[n]++;totalBlue++}
+    rCombCnt[d.routeR]=(rCombCnt[d.routeR]||0)+1;
+    pCombCnt[d.parityR]=(pCombCnt[d.parityR]||0)+1;
+    zCombCnt[d.zone]=(zCombCnt[d.zone]||0)+1;
+    d.routeR.split('').forEach((v,i)=>{if(i<(G[gk].pick)){posRoutes[i][v]++}})
+  }
+  
+  document.getElementById('totalRedCount').textContent=totalRed;
+  document.getElementById('totalBlueCount').textContent=totalBlue;
+  document.getElementById('totalRouteCount').textContent=totalRed;
+  
+  // Red ball freq
+  const maxR=Math.max(...Object.values(rCnt),1);
+  let rh='';const rSorted=Object.entries(rCnt).sort((a,b)=>b[1]-a[1]);
+  for(const [n,c] of rSorted){
+    const pct=c/maxR*100;
+    rh+=`<div class=stat-item><span>${String(n).padStart(2,'0')}</span><span class=cnt>${c}次</span></div><div class=stat-bar style=grid-column:1/-1><div class=fill style=width:${pct}%></div></div>`
+  }
+  document.getElementById('redFreqGrid').innerHTML=rh;
+  
+  // Blue ball freq
+  const maxB=Math.max(...Object.values(bCnt),1);
+  let bh='';const bSorted=Object.entries(bCnt).sort((a,b)=>b[1]-a[1]);
+  for(const [n,c] of bSorted){
+    const pct=c/maxB*100;
+    bh+=`<div class=stat-item><span>${String(n).padStart(2,'0')}</span><span class=cnt>${c}次</span></div><div class=stat-bar style=grid-column:1/-1><div class=fill style=width:${pct}%></div></div>`
+  }
+  document.getElementById('blueFreqGrid').innerHTML=bh;
+  
+  // Route position stats table
+  let rth='<tr><th>位置</th><th>路0</th><th>路1</th><th>路2</th></tr>';
+  for(let i=0;i<G[gk].pick;i++){
+    rth+=`<tr><td>第${i+1}位</td><td>${posRoutes[i][0]}次</td><td>${posRoutes[i][1]}次</td><td>${posRoutes[i][2]}次</td></tr>`
+  }
+  document.getElementById('routeStatTable').innerHTML=rth;
+  
+  // Route combos
+  const rCombSorted=Object.entries(rCombCnt).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const rcmax=Math.max(...rCombSorted.map(([,c])=>c),1);
+  let rch='';
+  for(const [pat,c] of rCombSorted){
+    rch+=`<div class=stat-item><span>${pat}</span><span class=cnt>${c}次</span></div><div class=stat-bar style=grid-column:1/-1><div class=fill style=width:${c/rcmax*100}%></div></div>`
+  }
+  document.getElementById('routeCombGrid').innerHTML=rch||'<div style=font-size:12px;color:#999>暂无数据</div>';
+  
+  // Parity combos
+  const pCombSorted=Object.entries(pCombCnt).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const pcmax=Math.max(...pCombSorted.map(([,c])=>c),1);
+  let pch='';
+  for(const [pat,c] of pCombSorted){
+    pch+=`<div class=stat-item><span>${pat}</span><span class=cnt>${c}次</span></div><div class=stat-bar style=grid-column:1/-1><div class=fill style=width:${c/pcmax*100}%></div></div>`
+  }
+  document.getElementById('parityCombGrid').innerHTML=pch||'<div style=font-size:12px;color:#999>暂无数据</div>';
+  
+  // Zone combos
+  const zCombSorted=Object.entries(zCombCnt).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const zcmax=Math.max(...zCombSorted.map(([,c])=>c),1);
+  let zch='';
+  for(const [pat,c] of zCombSorted){
+    zch+=`<div class=stat-item><span>${pat}</span><span class=cnt>${c}次</span></div><div class=stat-bar style=grid-column:1/-1><div class=fill style=width:${c/zcmax*100}%></div></div>`
+  }
+  document.getElementById('zoneCombGrid').innerHTML=zch||'<div style=font-size:12px;color:#999>暂无数据</div>';
+  
+  // Data table
+  let dlh='<table><tr><th></th><th>期号</th><th>红球</th><th>蓝球</th><th>路数</th><th>奇偶</th><th>区间</th></tr>';
+  for(let i=data.length-1;i>=0;i--){
+    const d=data[i];
+    dlh+=`<tr><td class=del data-idx=${i}>✕</td><td>${d.period}</td><td>${d.reds.join(',')}</td><td>${d.blues.join(',')}</td><td>${d.routeR}</td><td>${d.parityR}</td><td>${d.zone}</td></tr>`
+  }
+  dlh+='</table>';
+  document.getElementById('dataListContainer').innerHTML=dlh;
+  // Delete handler
+  document.querySelectorAll('#dataListContainer .del').forEach(el=>{
+    el.addEventListener('click',()=>{
+      const idx=parseInt(el.dataset.idx);const data=loadData();
+      if(idx>=0&&idx<data.length){data.splice(idx,1);saveData(data);renderStats()}
+    })
+  })
 }
 </script>
-</body>
-</html>
+<script>if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js")})}</script></body></html>
