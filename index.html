@@ -97,8 +97,8 @@ h1{font-size:20px;font-weight:600;margin-bottom:16px;display:flex;align-items:ce
 <div class=tab-bar id=tabBar><button class=on data-tab=filter>🔎 筛选</button><button data-tab=stats>📊 统计</button></div>
 <div class="tab-con on" id=tabFilter>
 <div class=card>
-<div class=sec><div class=sec-lbl>① 红区路数 <small>每位除3余数</small></div><div class=pkr-col id=routePickers></div></div>
-<div class=sec><div class=sec-lbl>② 红区奇偶</div><div class=pkr-col id=parityPickers></div></div>
+<div class=sec><div class=sec-lbl>① 红区路数/奇偶</div><div class=pkr-col id=routeParityPickers></div></div>
+<div class=sec><div class=sec-lbl>① 红区路数/奇偶</div><div class=pkr-col id=routeParityPickers></div></div>
 <div class=sec><div class=sec-lbl>③ 红区区间分布</div>
   <div class=z-row><input id=zoneInp type=text placeholder="如312" maxlength=3><span class=zh><span id=zoneHint>一区(1-11) 二区(12-22) 三区(23-33)</span> · <span id=zoneSum>三数和=6</span></span></div>
   <div class=err-msg id=errZone></div>
@@ -177,12 +177,12 @@ function pt(n){return n%2===1?'奇':'偶'}
 function*comb(arr,k){if(k===0){yield[];return}for(let i=0;i<=arr.length-k;i++)for(const r of comb(arr.slice(i+1),k-1))yield[arr[i],...r]}
 function buildPickers(){
   const pk=c().pick;
-  ['route','parity'].forEach(t=>{const e=document.getElementById(t+'Pickers');e.innerHTML='';const vv=t==='route'?['0','1','2']:['奇','偶'];for(let i=0;i<pk;i++){const r=document.createElement('div');r.className='pkr-row';const l=document.createElement('span');l.className='pl';l.textContent=i+1;r.appendChild(l);const o=document.createElement('div');o.className='opts';vv.forEach(v=>{const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.addEventListener('click',()=>b.classList.toggle('sel'));o.appendChild(b)});r.appendChild(o);e.appendChild(r)}});
+  const pk=c().pick;const e=document.getElementById('routeParityPickers');e.innerHTML='';for(let i=0;i<pk;i++){const r=document.createElement('div');r.className='pkr-row';const l=document.createElement('span');l.className='pl';l.textContent=i+1;r.appendChild(l);const o1=document.createElement('div');o1.className='opts';['0','1','2'].forEach(v=>{const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.addEventListener('click',()=>b.classList.toggle('sel'));o1.appendChild(b)});r.appendChild(o1);const o2=document.createElement('div');o2.className='opts';['奇','偶'].forEach(v=>{const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.style.width='32px';b.addEventListener('click',()=>b.classList.toggle('sel'));o2.appendChild(b)});r.appendChild(o2);e.appendChild(r)}(t=>{const e=document.getElementById(t+'Pickers');e.innerHTML='';const vv=t==='route'?['0','1','2']:['奇','偶'];for(let i=0;i<pk;i++){const r=document.createElement('div');r.className='pkr-row';const l=document.createElement('span');l.className='pl';l.textContent=i+1;r.appendChild(l);const o=document.createElement('div');o.className='opts';vv.forEach(v=>{const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.addEventListener('click',()=>b.classList.toggle('sel'));o.appendChild(b)});r.appendChild(o);e.appendChild(r)}});
   ['bRoute','bParity'].forEach(t=>{const e=document.getElementById(t+'Pickers');e.innerHTML='';const vv=t==='bRoute'?['0','1','2']:['奇','偶'];for(let i=0;i<c().bPick;i++){const r=document.createElement('div');r.className='pkr-row';r.style.gap='6px';const l=document.createElement('span');l.className='pl';l.textContent=i+1;r.appendChild(l);const o=document.createElement('div');o.className='opts';vv.forEach(v=>{const b=document.createElement('button');b.dataset.v=v;b.textContent=v;b.style.width='32px';b.style.height='28px';b.addEventListener('click',()=>b.classList.toggle('sel'));o.appendChild(b)});r.appendChild(o);e.appendChild(r)}});
   document.getElementById('sRed6').style.display=c().pick===6?'':'none';document.getElementById('sBlue2').style.display=c().bPick===2?'':'none'}
 function getPat(id){const g=document.querySelectorAll('#'+id+' .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelectorAll('.opts button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
-function getRoutePat(){return getPat('routePickers')}
-function getParityPat(){return getPat('parityPickers')}
+function getRoutePat(){const g=document.querySelectorAll('#routeParityPickers .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelector('.opts').querySelectorAll('button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
+function getParityPat(){const g=document.querySelectorAll('#routeParityPickers .pkr-row');let h=0;const a=Array.from(g).map(r=>{const s=r.querySelectorAll('.opts')[1].querySelectorAll('button.sel');if(s.length)h=1;return s.length?Array.from(s).map(b=>b.dataset.v):null});return h?a:null}
 function getBRoutePat(){return getPat('bRoutePickers')}
 function getBParityPat(){return getPat('bParityPickers')}
 function getZonePat(){const v=document.getElementById('zoneInp').value.trim();if(!v)return null;if(!/^[0-9]{3}$/.test(v))return null;const d=v.split('').map(Number);if(d.reduce((a,b)=>a+b,0)!==c().pick)return null;return d}
@@ -229,7 +229,7 @@ function doRandom(){
   if(all.length===0){document.getElementById('resultContainer').innerHTML='<div class=emp><div class=icon>🎲</div><div>当前条件下无可用号码</div></div>';document.getElementById('pagination').style.display='none';return}
   const p=all[Math.floor(Math.random()*all.length)];let b='';for(const n of p.r)b+=`<span class="ball z${zn(n)}">${String(n).padStart(2,'0')}</span>`;for(const n of p.b)b+=`<span class="ball blue">${String(n).padStart(2,'0')}</span>`;
   document.getElementById('resultContainer').innerHTML=`<div style=text-align:center;padding:16px><div style=font-size:13px;color:#999;margin-bottom:10px>🎲 随机一注</div><div style=display:flex;justify-content:center;gap:4px;flex-wrap:wrap>${b}</div><div style=font-size:12px;color:#bbb;margin-top:8px>共 ${all.length.toLocaleString()} 种组合中随机</div></div>`;document.getElementById('pagination').style.display='none';lr=all}
-function clearAll(){document.querySelectorAll('#routePickers .opts button,#parityPickers .opts button,#bRoutePickers .opts button,#bParityPickers .opts button').forEach(b=>b.classList.remove('sel'));document.getElementById('zoneInp').value='';document.getElementById('zoneInp').classList.remove('error');document.getElementById('errZone').textContent='';lr=[];cp=0;document.getElementById('countResult').textContent='-';document.getElementById('timeResult').textContent='-';document.getElementById('pagination').style.display='none';document.getElementById('resultContainer').innerHTML=document.getElementById('emptyState').outerHTML}
+function clearAll(){document.querySelectorAll('#routeParityPickers .opts button,#bRoutePickers .opts button,#bParityPickers .opts button,#bRoutePickers .opts button,#bParityPickers .opts button').forEach(b=>b.classList.remove('sel'));document.getElementById('zoneInp').value='';document.getElementById('zoneInp').classList.remove('error');document.getElementById('errZone').textContent='';lr=[];cp=0;document.getElementById('countResult').textContent='-';document.getElementById('timeResult').textContent='-';document.getElementById('pagination').style.display='none';document.getElementById('resultContainer').innerHTML=document.getElementById('emptyState').outerHTML}
 document.getElementById('btnFilter').addEventListener('click',doFilter);document.getElementById('btnRandom').addEventListener('click',doRandom);document.getElementById('btnClear').addEventListener('click',clearAll);document.getElementById('zoneInp').addEventListener('keydown',e=>{if(e.key==='Enter')doFilter()});
 // STATS
 function loadData(){try{const d=localStorage.getItem('lotteryStats_'+gk);return d?JSON.parse(d):[]}catch(e){return[]}}
@@ -249,8 +249,8 @@ function renderStats(){const data=loadData();document.getElementById('dataCount'
   dH+='</table>';document.getElementById('dataListContainer').innerHTML=dH;document.querySelectorAll('#dataListContainer .del').forEach(e=>{e.addEventListener('click',()=>{const i=parseInt(e.dataset.idx);const d=loadData();if(i>=0&&i<d.length){d.splice(i,1);saveData(d);renderStats()}})})}
 // INIT
 buildPickers();
-const rE='002220'.split('').map(Number);document.querySelectorAll('#routePickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(parseInt(b.dataset.v)===rE[i])b.classList.add('sel')})});
-const pE=['奇','偶','偶','偶','偶','奇'];document.querySelectorAll('#parityPickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(b.dataset.v===pE[i])b.classList.add('sel')})});
+const rE='002220'.split('').map(Number);document.querySelectorAll('#routeParityPickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(parseInt(b.dataset.v)===rE[i])b.classList.add('sel')})});
+const pE=['奇','偶','偶','偶','偶','奇'];document.querySelectorAll('#routeParityPickers .pkr-row').forEach((g,i)=>{const b=g.querySelectorAll('.opts button');b.forEach(b=>{if(b.dataset.v===pE[i])b.classList.add('sel')})});
 document.getElementById('zoneInp').value='312';swG('ssq');
 </script>
 <script>if("serviceWorker"in navigator){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js")})}</script></body></html>
